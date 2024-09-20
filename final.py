@@ -274,8 +274,10 @@ def update_table(n_clicks, start_date, end_date, downtime_criteria):
     
     return result.to_dict('records')
 
+
 if __name__ == "__main__":
-    app.run_server(debug=True)
+    port = int(os.environ.get("PORT", 8050))  # Get the port from the environment variable
+    app.run_server(host="0.0.0.0", port=port, debug=True)
 
 
 # In[ ]:
