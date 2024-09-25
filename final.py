@@ -233,11 +233,11 @@ def update_table(n_clicks, start_date, end_date, downtime_criteria):
     # Filter by date range
     filtered_df = merged_df[(merged_df['Alarm Time'] >= start_date) & (merged_df['Alarm Time'] <= end_date)]
 
-    # Count occurrences of each Node Alias
+    # Count occurrences of each Node Alias (Downtime Count)
     downtime_count = filtered_df['Node Alias'].value_counts().reset_index()
     downtime_count.columns = ['Node Alias', 'Downtime Count']
 
-    # Merge with the filtered DataFrame
+    # Merge with the filtered DataFrame to include downtime count
     filtered_df = pd.merge(filtered_df, downtime_count, on='Node Alias')
 
     # Apply downtime criteria filter
@@ -252,6 +252,11 @@ def update_table(n_clicks, start_date, end_date, downtime_criteria):
         elif operator == '>':
             filtered_df = filtered_df[filtered_df['Downtime Count'] > number]
     
+    # Keep only unique 'Node Alias' and the columns you need (e.g., 'Availability')
+    filtered_df = filtered_df.groupby('Node Alias').agg({
+        'Availability': 'mean',  # You can also use 'first' or another aggregation method
+    }).reset_index()
+
     # Return the filtered data for the DataTable
     return filtered_df.to_dict('records')
 # Run the app
