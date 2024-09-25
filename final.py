@@ -125,7 +125,7 @@ app.layout = dbc.Container(
                 ),
                 dbc.Col(
                     [
-                        html.Label("Select Downtime Count:", style=custom_label_style),
+                        html.Label("Select Downtime Count:", style=custom_dropdown_style),
                         dcc.Dropdown(
                                 id='downtime-dropdown',
                                 options=[
