@@ -50,6 +50,11 @@ df2_cleaned = data2_clean(file2_path)
 
 # Merge DataFrames on 'IP Address', adding 'Availability' to df1
 merged_df = pd.merge(df1_cleaned, df2_cleaned[['IP Address', 'Availability']], on='IP Address', how='left')
+downtime_count = (
+    merged_df.groupby('Node Alias')['Alarm Time']
+    .nunique()
+    .reset_index(name='Downtime Count')
+)
 
 # Initialize Dash App with Bootstrap Theme
 app = dash.Dash(__name__, external_stylesheets=[dbc.themes.CYBORG])
@@ -66,23 +71,25 @@ if pd.isnull(max_date):
 
 # Layout
 custom_label_style = {
-    "color": "#ffffff",  # Set to white for visibility
+    "color": "#000000",  # Set to white for visibility
     "fontWeight": "bold",
     "marginBottom": "5px"
 }
 
 custom_dropdown_style = {
     "backgroundColor": "#212529",  # Dark background color
-    "color": "#fff",  # White text color
+    "color": "#ffffff",  # White text color
     "border": "1px solid #444",  # Dark border
     "borderRadius": "5px",  # Rounded corners
     "padding": "5px 10px"  # Add some padding
 }
 
+downtime_options = [{'label': str(count), 'value': count} for count in downtime_count['Downtime Count'].unique()]
+
 app.layout = dbc.Container(
     fluid=True,
     style={
-        "backgroundColor": "#f5f5f5",  # Light gray background
+        "backgroundColor": "#f5f5f5",
         "minHeight": "100vh",
         "padding": "20px"
     },
@@ -118,17 +125,12 @@ app.layout = dbc.Container(
                 ),
                 dbc.Col(
                     [
-                        html.Label("Select Downtime Criteria:", style=custom_label_style),
+                        html.Label("Select Downtime Count:", style=custom_label_style),
                         dcc.Dropdown(
                             id='downtime-dropdown',
-                            options=[
-                                {'label': '<= 98', 'value': '<=98'},
-                                {'label': '> 98', 'value': '>98'},
-                                {'label': '> 99', 'value': '>99'},
-                                {'label': '> 99.5', 'value': '>99.5'}
-                            ],
-                            value='<=98',
-                            placeholder='Select downtime criteria',
+                            options=downtime_options,
+                            value=downtime_options[0]['value'] if downtime_options else None,
+                            placeholder='Select downtime count',
                             style=custom_dropdown_style
                         )
                     ],
@@ -136,7 +138,7 @@ app.layout = dbc.Container(
                 ),
                 dbc.Col(
                     [
-                        html.Br(),  # For spacing
+                        html.Br(),
                         dbc.Button(
                             "Apply Filters",
                             id='filter-button',
@@ -222,26 +224,14 @@ app.layout = dbc.Container(
      State('date-range', 'end_date'),
      State('downtime-dropdown', 'value')]
 )
-def update_table(n_clicks, start_date, end_date, downtime_criteria):
+def update_table(n_clicks, start_date, end_date, downtime_count_value):
     # Filter by date range
     filtered_df = merged_df[(merged_df['Alarm Time'] >= start_date) & (merged_df['Alarm Time'] <= end_date)]
 
-    # Apply downtime criteria filter (on 'Availability')
-    match = re.match(r'([<>]=?)(\d+(\.\d+)?)', downtime_criteria.strip())
-    
-    if match:
-        operator = match.group(1)
-        number = float(match.group(2))  # Assuming criteria is in percentage
-        
-        if operator == '<=':
-            filtered_df = filtered_df[filtered_df['Availability'] <= number]
-        elif operator == '>':
-            filtered_df = filtered_df[filtered_df['Availability'] > number]
-        elif operator == '>=':
-            filtered_df = filtered_df[filtered_df['Availability'] >= number]
-        elif operator == '<':
-            filtered_df = filtered_df[filtered_df['Availability'] < number]
-    
+    # Apply downtime count filter
+    if downtime_count_value is not None:
+        filtered_df = filtered_df[filtered_df['Node Alias'].isin(downtime_count[downtime_count['Downtime Count'] == downtime_count_value]['Node Alias'])]
+
     # Return the filtered data for the DataTable
     return filtered_df.to_dict('records')
 
