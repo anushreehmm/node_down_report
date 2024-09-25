@@ -128,9 +128,14 @@ app.layout = dbc.Container(
                         html.Label("Select Downtime Count:", style=custom_label_style),
                         dcc.Dropdown(
                             id='downtime-dropdown',
-                            options=downtime_options,
-                            value=downtime_options[0]['value'] if downtime_options else None,
-                            placeholder='Select downtime count',
+                            options=[
+                                {'label': '<= 3', 'value': '<=3'},
+                                {'label': '> 3', 'value': '>3'},
+                                {'label': '> 5', 'value': '>5'},
+                                {'label': '> 10', 'value': '>10'}
+                            ],
+                            value='<=3',  # Default value
+                            placeholder='Select downtime count criteria',
                             style=custom_dropdown_style
                         )
                     ],
@@ -223,18 +228,32 @@ app.layout = dbc.Container(
     [State('date-range', 'start_date'),
      State('date-range', 'end_date'),
      State('downtime-dropdown', 'value')]
-)
-def update_table(n_clicks, start_date, end_date, downtime_count_value):
+)   
+def update_table(n_clicks, start_date, end_date, downtime_criteria):
     # Filter by date range
     filtered_df = merged_df[(merged_df['Alarm Time'] >= start_date) & (merged_df['Alarm Time'] <= end_date)]
 
-    # Apply downtime count filter
-    if downtime_count_value is not None:
-        filtered_df = filtered_df[filtered_df['Node Alias'].isin(downtime_count[downtime_count['Downtime Count'] == downtime_count_value]['Node Alias'])]
+    # Count occurrences of each Node Alias
+    downtime_count = filtered_df['Node Alias'].value_counts().reset_index()
+    downtime_count.columns = ['Node Alias', 'Downtime Count']
 
+    # Merge with the filtered DataFrame
+    filtered_df = pd.merge(filtered_df, downtime_count, on='Node Alias')
+
+    # Apply downtime criteria filter
+    match = re.match(r'([<>]=?)(\d+)', downtime_criteria.strip())
+    
+    if match:
+        operator = match.group(1)
+        number = int(match.group(2))  # Convert to integer for comparison
+        
+        if operator == '<=':
+            filtered_df = filtered_df[filtered_df['Downtime Count'] <= number]
+        elif operator == '>':
+            filtered_df = filtered_df[filtered_df['Downtime Count'] > number]
+    
     # Return the filtered data for the DataTable
     return filtered_df.to_dict('records')
-
 # Run the app
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
