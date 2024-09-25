@@ -7,6 +7,7 @@
 import pandas as pd
 import dash
 import os
+import re
 from dash import dcc, html
 from dash.dependencies import Input, Output, State
 import dash_table
@@ -231,7 +232,7 @@ app.layout = dbc.Container(
         State('downtime-dropdown', 'value')
     ]
 )
-import re
+
 
 def update_table(start_date, end_date, downtime_criteria, selected_nodes):
     # Initial date filtering logic here...
