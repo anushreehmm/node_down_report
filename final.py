@@ -77,11 +77,13 @@ custom_label_style = {
 }
 
 custom_dropdown_style = {
-    "backgroundColor": "#212529",  # Dark background color
-    "color": "#ffffff",  # White text color
-    "border": "1px solid #444",  # Dark border
+    "backgroundColor": "#ffffff",  # Light background for better visibility
+    "color": "#000000",  # Dark text color for contrast
+    "border": "1px solid #007bff",  # Blue border for emphasis
     "borderRadius": "5px",  # Rounded corners
-    "padding": "5px 10px"  # Add some padding
+    "padding": "8px 12px",  # Add more padding for spacing
+    "fontSize": "14px",  # Adjust the font size for better readability
+    "boxShadow": "0 4px 8px rgba(0, 0, 0, 0.1)"  # Add slight shadow for depth
 }
 
 downtime_options = [{'label': str(count), 'value': count} for count in downtime_count['Downtime Count'].unique()]
