@@ -127,16 +127,17 @@ app.layout = dbc.Container(
                     [
                         html.Label("Select Downtime Count:", style=custom_label_style),
                         dcc.Dropdown(
-                            id='downtime-dropdown',
-                            options=[
-                                {'label': '1-3', 'value': '1-3'},
-                                {'label': '4-5', 'value': '4-5'},
-                                {'label': '>5', 'value': '>5'}
-                            ],
-                            value='1-3',  # Default value
-                            placeholder='Select downtime count criteria',
-                            style=custom_dropdown_style
-                        )
+                                id='downtime-dropdown',
+                                options=[
+                                    {'label': '1-3', 'value': '1-3'},
+                                    {'label': '4-5', 'value': '4-5'},
+                                    {'label': '>5', 'value': '>5'},
+                                    {'label': '>10', 'value': '>10'}  # New option for downtime count greater than 10
+                                ],
+                                value='1-3',  # Default value
+                                placeholder='Select downtime count criteria',
+                                style=custom_dropdown_style
+                            )
 
                     ],
                     width=4
@@ -241,20 +242,18 @@ def update_table(n_clicks, start_date, end_date, downtime_criteria):
     filtered_df = pd.merge(filtered_df, downtime_count, on='Node Alias')
 
     # Apply downtime criteria filter
-    match = re.match(r'([<>]=?)(\d+)', downtime_criteria.strip())
-    
-    if match:
-        operator = match.group(1)
-        number = int(match.group(2))  # Convert to integer for comparison
-        
-        if operator == '<=':
-            filtered_df = filtered_df[filtered_df['Downtime Count'] <= number]
-        elif operator == '>':
-            filtered_df = filtered_df[filtered_df['Downtime Count'] > number]
-    
+    if downtime_criteria == '1-3':
+        filtered_df = filtered_df[(filtered_df['Downtime Count'] >= 1) & (filtered_df['Downtime Count'] <= 3)]
+    elif downtime_criteria == '4-5':
+        filtered_df = filtered_df[(filtered_df['Downtime Count'] >= 4) & (filtered_df['Downtime Count'] <= 5)]
+    elif downtime_criteria == '>5':
+        filtered_df = filtered_df[filtered_df['Downtime Count'] > 5]
+    elif downtime_criteria == '>10':  # New filter for >10
+        filtered_df = filtered_df[filtered_df['Downtime Count'] > 10]
+
     # Keep only unique 'Node Alias' and the columns you need (e.g., 'Availability')
     filtered_df = filtered_df.groupby('Node Alias').agg({
-        'Availability': 'mean',  # You can also use 'first' or another aggregation method
+        'Availability': 'mean',  # Or use another aggregation method
     }).reset_index()
 
     # Return the filtered data for the DataTable
