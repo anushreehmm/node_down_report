@@ -30,14 +30,14 @@ def data2_clean(file2_path):
     df = df.rename(columns={
         'Unnamed: 0': 'Node Alias',
         'Unnamed: 1': 'IP Address',
-        'Unnamed: 4': 'Availability(%)',
+        'Unnamed: 4': 'Availability',
         'Unnamed: 5': 'Latency(msec)',
         'Unnamed: 6': 'Packet Loss(%)'
     })
     df['Packet Loss(%)'] = pd.to_numeric(df['Packet Loss(%)'], errors='coerce')
-    df['Availability(%)'] = pd.to_numeric(df['Availability(%)'], errors='coerce')
+    df['Availability'] = pd.to_numeric(df['Availability'], errors='coerce')
     df['Latency(msec)'] = pd.to_numeric(df['Latency(msec)'], errors='coerce')
-    df = df.dropna(subset=['Packet Loss(%)', 'Availability(%)', 'Latency(msec)'])
+    df = df.dropna(subset=['Packet Loss(%)', 'Availability', 'Latency(msec)'])
     return df
 
 # File Paths
@@ -48,8 +48,8 @@ file2_path = 'data2.xlsx'
 df1_cleaned = data1_clean(file1_path)
 df2_cleaned = data2_clean(file2_path)
 
-# Merge DataFrames on 'IP Address', adding 'Availability(%)' to df1
-merged_df = pd.merge(df1_cleaned, df2_cleaned[['IP Address', 'Availability(%)']], on='IP Address', how='left')
+# Merge DataFrames on 'IP Address', adding 'Availability' to df1
+merged_df = pd.merge(df1_cleaned, df2_cleaned[['IP Address', 'Availability']], on='IP Address', how='left')
 
 # Initialize Dash App with Bootstrap Theme
 app = dash.Dash(__name__, external_stylesheets=[dbc.themes.CYBORG])
@@ -159,7 +159,7 @@ app.layout = dbc.Container(
                                 id='filtered-table',
                                 columns=[
                                     {'name': 'Node Alias', 'id': 'Node Alias'},
-                                    {'name': 'Availability (%)', 'id': 'Availability(%)'}
+                                    {'name': 'Availability', 'id': 'Availability'}
                                 ],
                                 style_table={'overflowX': 'auto'},
                                 style_cell={
@@ -176,24 +176,24 @@ app.layout = dbc.Container(
                                 style_data_conditional=[
                                     {
                                         'if': {
-                                            'filter_query': '{Availability(%) > 99.5}',
-                                            'column_id': 'Availability(%)'
+                                            'filter_query': '{Availability} > 99.5',
+                                            'column_id': 'Availability'
                                         },
                                         'backgroundColor': '#28a745',
                                         'color': 'white'
                                     },
                                     {
                                         'if': {
-                                            'filter_query': '{Availability(%) <= 99.5 && Availability(%) > 98.5}',
-                                            'column_id': 'Availability(%)'
+                                            'filter_query': '{Availability} <= 99.5 && {Availability} > 98.5',
+                                            'column_id': 'Availability'
                                         },
                                         'backgroundColor': '#ffc107',
                                         'color': 'black'
                                     },
                                     {
                                         'if': {
-                                            'filter_query': '{Availability(%) <= 98.5}',
-                                            'column_id': 'Availability(%)'
+                                            'filter_query': '{Availability} <= 98.5',
+                                            'column_id': 'Availability'
                                         },
                                         'backgroundColor': '#dc3545',
                                         'color': 'white'
@@ -226,7 +226,7 @@ def update_table(n_clicks, start_date, end_date, downtime_criteria):
     # Filter by date range
     filtered_df = merged_df[(merged_df['Alarm Time'] >= start_date) & (merged_df['Alarm Time'] <= end_date)]
 
-    # Apply downtime criteria filter (on 'Availability(%)')
+    # Apply downtime criteria filter (on 'Availability')
     match = re.match(r'([<>]=?)(\d+(\.\d+)?)', downtime_criteria.strip())
     
     if match:
@@ -234,17 +234,18 @@ def update_table(n_clicks, start_date, end_date, downtime_criteria):
         number = float(match.group(2))  # Assuming criteria is in percentage
         
         if operator == '<=':
-            filtered_df = filtered_df[filtered_df['Availability(%)'] <= number]
+            filtered_df = filtered_df[filtered_df['Availability'] <= number]
         elif operator == '>':
-            filtered_df = filtered_df[filtered_df['Availability(%)'] > number]
+            filtered_df = filtered_df[filtered_df['Availability'] > number]
         elif operator == '>=':
-            filtered_df = filtered_df[filtered_df['Availability(%)'] >= number]
+            filtered_df = filtered_df[filtered_df['Availability'] >= number]
         elif operator == '<':
-            filtered_df = filtered_df[filtered_df['Availability(%)'] < number]
+            filtered_df = filtered_df[filtered_df['Availability'] < number]
     
     # Return the filtered data for the DataTable
     return filtered_df.to_dict('records')
 
-if __name__ == "__main__":
-    port = int(os.environ.get("PORT", 8050))  # Get the port from the environment variable
+# Run the app
+if __name__ == '__main__':
+    port = int(os.environ.get('PORT', 5000))
     app.run_server(host="0.0.0.0", port=port, debug=True)
