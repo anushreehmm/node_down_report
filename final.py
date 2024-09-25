@@ -1,9 +1,3 @@
-#!/usr/bin/env python
-# coding: utf-8
-
-# In[25]:
-
-
 import pandas as pd
 import dash
 import os
@@ -128,12 +122,12 @@ app.layout = dbc.Container(
                         dcc.Dropdown(
                             id='downtime-dropdown',
                             options=[
-                                {'label': '<= 3', 'value': '<=3'},
-                                {'label': '> 3', 'value': '>3'},
-                                {'label': '> 5', 'value': '>5'},
-                                {'label': '> 10', 'value': '>10'}
+                                {'label': '<= 98', 'value': '<=98'},
+                                {'label': '> 98', 'value': '>98'},
+                                {'label': '> 99', 'value': '>99'},
+                                {'label': '> 99.5', 'value': '>99.5'}
                             ],
-                            value='<=3',
+                            value='<=98',
                             placeholder='Select downtime criteria',
                             style=custom_dropdown_style
                         )
@@ -182,7 +176,7 @@ app.layout = dbc.Container(
                                 style_data_conditional=[
                                     {
                                         'if': {
-                                            'filter_query': '{Availability(%)} > 99.5',
+                                            'filter_query': '{Availability(%) > 99.5}',
                                             'column_id': 'Availability(%)'
                                         },
                                         'backgroundColor': '#28a745',
@@ -190,7 +184,7 @@ app.layout = dbc.Container(
                                     },
                                     {
                                         'if': {
-                                            'filter_query': '{Availability(%)} > 98.5 && {Availability(%)} <= 99.5',
+                                            'filter_query': '{Availability(%) <= 99.5 && Availability(%) > 98.5}',
                                             'column_id': 'Availability(%)'
                                         },
                                         'backgroundColor': '#ffc107',
@@ -198,17 +192,17 @@ app.layout = dbc.Container(
                                     },
                                     {
                                         'if': {
-                                            'filter_query': '{Availability(%)} <= 98.5',
+                                            'filter_query': '{Availability(%) <= 98.5}',
                                             'column_id': 'Availability(%)'
                                         },
                                         'backgroundColor': '#dc3545',
                                         'color': 'white'
                                     }
                                 ],
-                                page_size=20,  # Optional: limit number of rows per page
+                                style_as_list_view=True,
+                                page_size=20,
                                 sort_action='native',
-                                filter_action='native',
-                                style_as_list_view=True
+                                filter_action='native'
                             )
                         )
                     ],
@@ -223,51 +217,34 @@ app.layout = dbc.Container(
 # Callback Function
 @app.callback(
     Output('filtered-table', 'data'),
-    [
-        Input('filter-button', 'n_clicks')
-    ],
-    [
-        State('date-range', 'start_date'),
-        State('date-range', 'end_date'),
-        State('downtime-dropdown', 'value')
-    ]
+    [Input('filter-button', 'n_clicks')],
+    [State('date-range', 'start_date'),
+     State('date-range', 'end_date'),
+     State('downtime-dropdown', 'value')]
 )
+def update_table(n_clicks, start_date, end_date, downtime_criteria):
+    # Filter by date range
+    filtered_df = merged_df[(merged_df['Alarm Time'] >= start_date) & (merged_df['Alarm Time'] <= end_date)]
 
-
-def update_table(start_date, end_date, downtime_criteria, selected_nodes):
-    # Initial date filtering logic here...
-    
-    # Regex to extract operator and number from the downtime criteria
-    match = re.match(r'([<>]=?)(\d+)', downtime_criteria.strip())
+    # Apply downtime criteria filter (on 'Availability(%)')
+    match = re.match(r'([<>]=?)(\d+(\.\d+)?)', downtime_criteria.strip())
     
     if match:
         operator = match.group(1)
-        number = int(match.group(2))
+        number = float(match.group(2))  # Assuming criteria is in percentage
         
-        # Apply the filtering logic based on the operator
         if operator == '<=':
-            filtered_df = merged_df[merged_df['Occurrences'] <= number]
-        elif operator == '<':
-            filtered_df = merged_df[merged_df['Occurrences'] < number]
-        elif operator == '>=':
-            filtered_df = merged_df[merged_df['Occurrences'] >= number]
+            filtered_df = filtered_df[filtered_df['Availability(%)'] <= number]
         elif operator == '>':
-            filtered_df = merged_df[merged_df['Occurrences'] > number]
-    else:
-        # If no valid downtime criteria, return unfiltered data or handle accordingly
-        filtered_df = merged_df
-
+            filtered_df = filtered_df[filtered_df['Availability(%)'] > number]
+        elif operator == '>=':
+            filtered_df = filtered_df[filtered_df['Availability(%)'] >= number]
+        elif operator == '<':
+            filtered_df = filtered_df[filtered_df['Availability(%)'] < number]
+    
     # Return the filtered data for the DataTable
     return filtered_df.to_dict('records')
-
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 8050))  # Get the port from the environment variable
     app.run_server(host="0.0.0.0", port=port, debug=True)
-
-
-# In[ ]:
-
-
-
-
