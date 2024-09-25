@@ -231,49 +231,33 @@ app.layout = dbc.Container(
         State('downtime-dropdown', 'value')
     ]
 )
-def update_table(n_clicks, start_date, end_date, downtime_criteria):
-    # Validate and parse dates
-    try:
-        if start_date:
-            start_date = pd.to_datetime(start_date).date()
-        else:
-            start_date = merged_df['Alarm Time'].min().date()
+import re
+
+def update_table(start_date, end_date, downtime_criteria, selected_nodes):
+    # Initial date filtering logic here...
+    
+    # Regex to extract operator and number from the downtime criteria
+    match = re.match(r'([<>]=?)(\d+)', downtime_criteria.strip())
+    
+    if match:
+        operator = match.group(1)
+        number = int(match.group(2))
         
-        if end_date:
-            end_date = pd.to_datetime(end_date).date()
-        else:
-            end_date = merged_df['Alarm Time'].max().date()
-    except Exception as e:
-        # If dates are invalid, return empty data
-        print(f"Date parsing error: {e}")
-        return []
-    
-    # Ensure 'Alarm Time' is datetime
-    if not pd.api.types.is_datetime64_any_dtype(merged_df['Alarm Time']):
-        merged_df['Alarm Time'] = pd.to_datetime(merged_df['Alarm Time'], errors='coerce')
-    
-    # Filter merged DataFrame based on date range
-    mask = (merged_df['Alarm Time'].dt.date >= start_date) & (merged_df['Alarm Time'].dt.date <= end_date)
-    filtered_df = merged_df.loc[mask]
-    
-    if filtered_df.empty:
-        return []
-    
-    # Count occurrences of each Node Alias
-    counts = filtered_df['Node Alias'].value_counts().reset_index()
-    counts.columns = ['Node Alias', 'Count']
-    
-    # Merge counts with availability
-    result = pd.merge(counts, df2_cleaned[['Node Alias', 'Availability(%)']], on='Node Alias', how='left')
-    
-    # Apply downtime criteria filter
-    downtime_limit = int(downtime_criteria.split()[-1])
-    if downtime_criteria.startswith('<='):
-        result = result[result['Count'] <= downtime_limit]
+        # Apply the filtering logic based on the operator
+        if operator == '<=':
+            filtered_df = merged_df[merged_df['Occurrences'] <= number]
+        elif operator == '<':
+            filtered_df = merged_df[merged_df['Occurrences'] < number]
+        elif operator == '>=':
+            filtered_df = merged_df[merged_df['Occurrences'] >= number]
+        elif operator == '>':
+            filtered_df = merged_df[merged_df['Occurrences'] > number]
     else:
-        result = result[result['Count'] > downtime_limit]
-    
-    return result.to_dict('records')
+        # If no valid downtime criteria, return unfiltered data or handle accordingly
+        filtered_df = merged_df
+
+    # Return the filtered data for the DataTable
+    return filtered_df.to_dict('records')
 
 
 if __name__ == "__main__":
