@@ -129,15 +129,15 @@ app.layout = dbc.Container(
                         dcc.Dropdown(
                             id='downtime-dropdown',
                             options=[
-                                {'label': '<= 3', 'value': '<=3'},
-                                {'label': '> 3', 'value': '>3'},
-                                {'label': '> 5', 'value': '>5'},
-                                {'label': '> 10', 'value': '>10'}
+                                {'label': '1-3', 'value': '1-3'},
+                                {'label': '4-5', 'value': '4-5'},
+                                {'label': '>5', 'value': '>5'}
                             ],
-                            value='<=3',  # Default value
+                            value='1-3',  # Default value
                             placeholder='Select downtime count criteria',
                             style=custom_dropdown_style
                         )
+
                     ],
                     width=4
                 ),
